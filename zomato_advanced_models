@@ -1,0 +1,137 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC
+from sklearn.decomposition import PCA
+from sklearn.neighbors import KNeighborsClassifier
+
+# ==========================================
+# 1. DATA SETUP & SIMULATION
+# ==========================================
+print("Preparing data for 7 advanced models...")
+np.random.seed(42)
+n_samples = 600
+
+# Mocking features similar to Kaggle's Zomato dataset
+rates = np.random.uniform(2.0, 4.9, n_samples)
+costs = rates * 250 + np.random.normal(0, 200, n_samples)
+costs = np.clip(costs, 100, 2500)
+votes = (rates * 150) + np.random.randint(10, 500, n_samples)
+online_order = np.where(rates > 3.5, 1, 0) # 1 = Good/Popular, 0 = Average
+
+# Create main DataFrame
+df = pd.DataFrame({
+    'rate': rates,
+    'approx_cost': costs,
+    'votes': votes,
+    'is_popular': online_order
+})
+
+X = df[['rate', 'approx_cost', 'votes']]
+y = df['is_popular']
+
+# Scale features for SVM, PCA, and KNN
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# Set up visual canvas (3 rows, 2 columns grid for multi-plots)
+fig, axes = plt.subplots(3, 2, figsize=(16, 18))
+axes = axes.flatten()
+
+# ==========================================
+# 2. DECISION TREE (Plot 1)
+# ==========================================
+print("Running 1/7: Decision Tree...")
+dt_model = DecisionTreeClassifier(max_depth=3)
+dt_model.fit(X_train, y_train)
+plot_tree(dt_model, feature_names=['rate', 'approx_cost', 'votes'], class_names=['No', 'Yes'], filled=True, ax=axes[0])
+axes[0].set_title("1. Decision Tree Structure")
+
+# ==========================================
+# 3. RANDOM FOREST (Plot 2)
+# ==========================================
+print("Running 2/7: Random Forest...")
+rf_model = RandomForestClassifier(n_estimators=50, random_state=42)
+rf_model.fit(X_train, y_train)
+
+importances = rf_model.feature_importances_
+axes[1].bar(['Rating', 'Approx Cost', 'Votes'], importances, color='teal', alpha=0.8)
+axes[1].set_title("2. Random Forest Feature Importance")
+axes[1].set_ylabel("Importance Score")
+
+# ==========================================
+# 4. PRINCIPAL COMPONENT ANALYSIS (PCA) (Plot 3)
+# ==========================================
+print("Running 3/7: PCA Dimension Reduction...")
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+
+sns.scatterplot(x=X_pca[:, 0], y=X_pca[:, 1], hue=y, palette='coolwarm', alpha=0.7, ax=axes[2])
+axes[2].set_title("3. PCA: 3D Zomato Data Reduced to 2D")
+axes[2].set_xlabel("Principal Component 1")
+axes[2].set_ylabel("Principal Component 2")
+
+# ==========================================
+# 5. GRADIENT BOOSTING MODEL (Plot 4)
+# ==========================================
+print("Running 4/7: Gradient Boosting...")
+gb_model = GradientBoostingClassifier(n_estimators=50, random_state=42)
+gb_model.fit(X_train, y_train)
+
+# Plot training loss over iterations
+axes[3].plot(gb_model.train_score_, label='Training Loss', color='crimson', linewidth=2)
+axes[3].set_title("4. Gradient Boosting Loss Curve")
+axes[3].set_xlabel("Boosting Iterations")
+axes[3].set_ylabel("Loss")
+axes[3].legend()
+
+# ==========================================
+# 6. REINFORCEMENT LEARNING & Q-NETWORK (Plot 5)
+# ==========================================
+print("Running 5/7: Simulating Reinforcement Learning Q-Network...")
+num_states = 10   
+num_actions = 2  
+q_table = np.zeros((num_states, num_actions))
+
+rewards_history = []
+for episode in range(100):
+    total_reward = 0
+    for state in range(num_states):
+        action = np.random.choice([0, 1]) 
+        reward = 10 if (action == 1 and state > 5) else -5
+        q_table[state, action] += 0.1 * (reward - q_table[state, action])
+        total_reward += reward
+    rewards_history.append(total_reward)
+
+axes[4].plot(rewards_history, color='purple', linewidth=2)
+axes[4].set_title("5. Q-Network / RL Reward Convergence")
+axes[4].set_xlabel("Training Episodes")
+axes[4].set_ylabel("Total Reward Accumulated")
+
+# ==========================================
+# 7. SVM & K-NEAREST NEIGHBORS (KNN) (Plot 6)
+# ==========================================
+print("Running 6/7 & 7/7: SVM and KNN...")
+svm_model = SVC(kernel='rbf')
+svm_model.fit(X_train, y_train)
+
+knn_model = KNeighborsClassifier(n_neighbors=5)
+knn_model.fit(X_train, y_train)
+
+svm_acc = svm_model.score(X_test, y_test) * 100
+knn_acc = knn_model.score(X_test, y_test) * 100
+
+axes[5].axis('off')
+axes[5].text(0.1, 0.6, f"6. SVM Test Accuracy:\n     {svm_acc:.2f}%", fontsize=14, weight='bold', color='darkblue')
+axes[5].text(0.1, 0.2, f"7. KNN Test Accuracy:\n     {knn_acc:.2f}%", fontsize=14, weight='bold', color='darkgreen')
+
+# Finish Layout
+plt.tight_layout()
+print("All models processed! Displaying graphics panel...")
+plt.show()
